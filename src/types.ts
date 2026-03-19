@@ -158,10 +158,40 @@ export const RawRuleSchema = z.object({
   filePath: z.string(),
   fileName: z.string(),
   content: z.string(),
-  checksum: z.string(),
-  sourceRepo: z.string(),
+  /** Directory the rule was read from (e.g. '.claude/rules'). Always set by rules-reader. */
+  sourceDir: z.string(),
+  /** SHA-256 of content — populated when rules come from a remote source. */
+  checksum: z.string().optional(),
+  /** Repo the rule originated from — populated for multi-repo scenarios. */
+  sourceRepo: z.string().optional(),
 });
 export type RawRule = z.infer<typeof RawRuleSchema>;
+
+// ============ CLASSIFIER TYPES (W4 — single source of truth) ============
+
+export type RuleCategory =
+  | 'security' | 'testing' | 'api-routes' | 'typescript' | 'agents'
+  | 'git' | 'error-handling' | 'performance' | 'prisma'
+  | 'coderabbit' | 'sonarqube' | 'trivy' | 'other';
+
+export type RuleTarget = 'universal' | 'nextjs-only' | 'agents-only' | 'prisma-only';
+
+/** Severity levels used by the rules classifier (distinct from RuleSeverity used in storage). */
+export type ClassifierSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM';
+
+export interface ClassifiedRule {
+  filePath: string;
+  fileName: string;
+  /** Directory the rule was sourced from (e.g. '.claude/rules'). */
+  sourceDir: string;
+  content: string;
+  category: RuleCategory;
+  target: RuleTarget;
+  severity: ClassifierSeverity;
+  summary: string;
+  keyPatterns: string[];
+  overlaps: { ruleFile: string; similarity: number }[];
+}
 
 export const ConsolidatedRuleSchema = z.object({
   id: z.string().uuid(),

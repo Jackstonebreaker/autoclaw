@@ -1,18 +1,15 @@
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { createLogger } from './logger.js';
+import type { RawRule } from './types.js';
+
+// Re-export so existing consumers that import RawRule from rules-reader continue to work.
+export type { RawRule } from './types.js';
 
 const logger = createLogger('rules-reader');
 
 /** Default rule directories searched when no custom paths are provided */
 export const DEFAULT_RULE_DIRS = ['.claude/rules', '.augment/rules', '.cursor/rules'];
-
-export interface RawRule {
-  filePath: string;
-  content: string;
-  sourceDir: string;
-  fileName: string;
-}
 
 /**
  * Read all .md rule files recursively from configured directories.

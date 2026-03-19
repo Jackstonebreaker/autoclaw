@@ -2,30 +2,20 @@ import { callClaude, MODELS } from './ai/index.js';
 import { SimpleQueue } from './ai/queue.js';
 import { createLogger } from './logger.js';
 import type { RawRule } from './rules-reader.js';
+import type {
+  RuleCategory,
+  RuleTarget,
+  ClassifierSeverity,
+  ClassifiedRule,
+} from './types.js';
+
+// Re-export for backward compatibility with existing consumers.
+export type { RuleCategory, RuleTarget, ClassifiedRule } from './types.js';
+/** @deprecated Use ClassifierSeverity from types.ts. Kept for backward compatibility. */
+export type RuleSeverity = ClassifierSeverity;
 
 const logger = createLogger('rules-classifier');
 const queue = new SimpleQueue();
-
-export type RuleCategory =
-  | 'security' | 'testing' | 'api-routes' | 'typescript' | 'agents'
-  | 'git' | 'error-handling' | 'performance' | 'prisma'
-  | 'coderabbit' | 'sonarqube' | 'trivy' | 'other';
-
-export type RuleSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM';
-export type RuleTarget = 'universal' | 'nextjs-only' | 'agents-only' | 'prisma-only';
-
-export interface ClassifiedRule {
-  filePath: string;
-  fileName: string;
-  sourceDir: string;
-  content: string;
-  category: RuleCategory;
-  target: RuleTarget;
-  severity: RuleSeverity;
-  summary: string;
-  keyPatterns: string[];
-  overlaps: { ruleFile: string; similarity: number }[];
-}
 
 /**
  * Classify an array of raw rules using Claude Haiku.
