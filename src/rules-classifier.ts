@@ -1,7 +1,7 @@
 import { callClaude, MODELS } from './ai/index.js';
 import { SimpleQueue } from './ai/queue.js';
 import { createLogger } from './logger.js';
-import type { RawRule } from './rules-reader.js';
+import type { RawRule } from './types.js';
 import type {
   RuleCategory,
   RuleTarget,

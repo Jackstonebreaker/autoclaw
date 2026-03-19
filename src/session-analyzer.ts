@@ -72,7 +72,7 @@ Return ONLY the JSON array, no markdown.`;
   );
 
   try {
-    const parsed = JSON.parse(result.content) as unknown;
+    const parsed: unknown = JSON.parse(result.content);
     return Array.isArray(parsed) ? (parsed as SessionPattern[]) : [];
   } catch {
     logger.warn('Failed to parse Claude response as JSON');
