@@ -63,42 +63,55 @@ export async function fetchClosedTickets(apiKey: string): Promise<LinearTicket[]
     }
   `;
 
-  const response = await fetch('https://api.linear.app/graphql', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': apiKey,
-    },
-    body: JSON.stringify({ query }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
-  if (!response.ok) {
-    throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
-  }
+  try {
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': apiKey,
+      },
+      body: JSON.stringify({ query }),
+      signal: controller.signal,
+    });
 
-  const data = await response.json() as {
-    data?: {
-      issues?: {
-        nodes?: Array<{
-          id: string;
-          identifier: string;
-          title: string;
-          labels?: { nodes?: Array<{ name: string }> };
-          completedAt: string;
-        }>;
+    if (!response.ok) {
+      throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as {
+      data?: {
+        issues?: {
+          nodes?: Array<{
+            id: string;
+            identifier: string;
+            title: string;
+            labels?: { nodes?: Array<{ name: string }> };
+            completedAt: string;
+          }>;
+        };
       };
     };
-  };
 
-  const nodes = data?.data?.issues?.nodes ?? [];
+    const nodes = data?.data?.issues?.nodes ?? [];
 
-  return nodes.map(node => ({
-    id: node.id,
-    identifier: node.identifier,
-    title: node.title,
-    labels: node.labels?.nodes?.map(l => l.name) ?? [],
-    completedAt: node.completedAt,
-  }));
+    return nodes.map(node => ({
+      id: node.id,
+      identifier: node.identifier,
+      title: node.title,
+      labels: node.labels?.nodes?.map(l => l.name) ?? [],
+      completedAt: node.completedAt,
+    }));
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Linear API request timed out after 30 seconds');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
