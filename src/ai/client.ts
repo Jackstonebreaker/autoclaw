@@ -37,7 +37,7 @@ export interface CallClaudeResult {
  * 5xx, rate limit (429), and network errors are retriable.
  * 4xx client errors (auth, not found, bad request) are NOT retriable.
  */
-function isRetriableError(error: unknown): boolean {
+export function isRetriableError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     // Rate limit and server errors are retriable
@@ -75,13 +75,13 @@ export async function callClaude(options: CallClaudeOptions): Promise<CallClaude
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await aiClient.messages.create({
+      const response = await aiQueue.add(() => aiClient.messages.create({
         model,
         max_tokens: options.maxTokens ?? 4096,
         temperature: options.temperature ?? 0,
         system: options.systemPrompt ?? '',
         messages: [{ role: 'user', content: options.prompt }],
-      });
+      }));
 
       const textBlock = response.content.find(b => b.type === 'text');
       return {
