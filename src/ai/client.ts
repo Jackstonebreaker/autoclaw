@@ -1,4 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { SimpleQueue } from './queue.js';
+
+/** Singleton Anthropic client — always use this, never instantiate directly */
+export const aiClient = new Anthropic();
+
+/** Singleton queue for rate limiting — always use this for API calls */
+export const aiQueue = new SimpleQueue();
 
 /** Available Claude models for AutoClaw */
 export const MODELS = {
@@ -26,17 +33,49 @@ export interface CallClaudeResult {
 }
 
 /**
- * Call Claude API with retry logic
- * Uses exponential backoff with max 3 retries
+ * Determine if an error is retriable.
+ * 5xx, rate limit (429), and network errors are retriable.
+ * 4xx client errors (auth, not found, bad request) are NOT retriable.
+ */
+function isRetriableError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    // Rate limit and server errors are retriable
+    if (message.includes('rate') || message.includes('429')) return true;
+    if (
+      message.includes('500') ||
+      message.includes('502') ||
+      message.includes('503') ||
+      message.includes('504')
+    ) return true;
+    if (
+      message.includes('timeout') ||
+      message.includes('econnreset') ||
+      message.includes('network')
+    ) return true;
+    // 4xx client errors are NOT retriable
+    if (
+      message.includes('401') ||
+      message.includes('403') ||
+      message.includes('404') ||
+      message.includes('400')
+    ) return false;
+  }
+  return true; // Unknown errors: retry by default
+}
+
+/**
+ * Call Claude API with retry logic.
+ * Uses the singleton aiClient and discriminant retry (5xx / rate-limit only).
+ * Uses exponential backoff with max 3 retries.
  */
 export async function callClaude(options: CallClaudeOptions): Promise<CallClaudeResult> {
-  const client = new Anthropic(); // Uses ANTHROPIC_API_KEY env var
   const model = options.model ?? MODELS.HAIKU;
   const maxRetries = 3;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await client.messages.create({
+      const response = await aiClient.messages.create({
         model,
         max_tokens: options.maxTokens ?? 4096,
         temperature: options.temperature ?? 0,
@@ -52,7 +91,7 @@ export async function callClaude(options: CallClaudeOptions): Promise<CallClaude
         outputTokens: response.usage.output_tokens,
       };
     } catch (error) {
-      if (attempt === maxRetries) throw error;
+      if (attempt === maxRetries || !isRetriableError(error)) throw error;
       const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
       await new Promise(r => setTimeout(r, delay));
     }
