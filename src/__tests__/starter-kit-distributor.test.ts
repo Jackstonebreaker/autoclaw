@@ -9,6 +9,11 @@ vi.mock('node:fs', () => ({
   mkdirSync: vi.fn(),
 }));
 
+// --- child_process mock (execSync for Husky availability check) ---
+vi.mock('node:child_process', () => ({
+  execSync: vi.fn(),
+}));
+
 // --- starter-kit mock ---
 vi.mock('../starter-kit.js', () => ({
   readStarterKit: vi.fn(),
@@ -16,7 +21,10 @@ vi.mock('../starter-kit.js', () => ({
 }));
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { readStarterKit, applyStarterKit } from '../starter-kit.js';
+
+const mockExecSync = vi.mocked(execSync);
 
 const mockExistsSync = vi.mocked(existsSync);
 const mockReadFileSync = vi.mocked(readFileSync);
@@ -52,6 +60,8 @@ beforeEach(() => {
   mockApplyStarterKit.mockReturnValue({ applied: ['rules/lint.md'], skipped: [], errors: [] });
   // By default: no CLAUDE.md template in kit, no package.json in target
   mockExistsSync.mockReturnValue(false);
+  // By default: Husky is available
+  mockExecSync.mockReturnValue(Buffer.from(''));
 });
 
 // ===================== distributeStarterKit =====================

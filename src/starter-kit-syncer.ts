@@ -30,6 +30,7 @@ export interface SyncApplyResult {
   created: string[];
   preserved: string[];
   errors: string[];
+  upToDate: number;
   commitMessage: string;
 }
 
@@ -104,6 +105,7 @@ export function applySync(
   const created: string[] = [];
   const preserved: string[] = [];
   const errors: string[] = [];
+  let upToDate = 0;
 
   for (const { rule, content } of kit.rules) {
     const localPath = join(targetDir, rule.path);
@@ -121,7 +123,11 @@ export function applySync(
       } else {
         const localContent = readFileSync(localPath, 'utf-8');
         const localHash = createHash('sha256').update(localContent).digest('hex');
-        if (localHash !== templateHash) updated.push(rule.path);
+        if (localHash !== templateHash) {
+          updated.push(rule.path);
+        } else {
+          upToDate++;
+        }
       }
       continue;
     }
@@ -137,6 +143,8 @@ export function applySync(
         if (localHash !== templateHash) {
           writeFileSync(localPath, content, 'utf-8');
           updated.push(rule.path);
+        } else {
+          upToDate++;
         }
       }
     } catch (err) {
@@ -145,6 +153,6 @@ export function applySync(
   }
 
   const commitMessage = `chore: sync rules from autoclaw template v${kit.manifest.version}`;
-  return { updated, created, preserved, errors, commitMessage };
+  return { updated, created, preserved, errors, upToDate, commitMessage };
 }
 

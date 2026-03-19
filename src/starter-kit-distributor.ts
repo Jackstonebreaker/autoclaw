@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createLogger } from './logger.js';
@@ -132,6 +133,14 @@ function generateClaudeMd(kit: StarterKit, targetDir: string, projectName: strin
 }
 
 function installHuskyHook(targetDir: string): boolean {
+  // Check if Husky is available before writing the hook
+  try {
+    execSync('npx husky --version', { cwd: targetDir, stdio: 'pipe' });
+  } catch {
+    logger.info('Husky not available — hook installation skipped');
+    return false;
+  }
+
   const huskyDir = join(targetDir, '.husky');
   mkdirSync(huskyDir, { recursive: true });
 

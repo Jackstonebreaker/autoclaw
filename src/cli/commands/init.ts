@@ -74,7 +74,7 @@ export function registerInitCommand(program: Command): void {
         mkdirSync(hooksDir, { recursive: true });
 
         const hookPath = join(hooksDir, 'post-commit');
-        const hookContent = '#!/bin/sh\nnpx autoclaw run --dry-run\n';
+        const hookContent = '#!/bin/sh\n# AutoClaw post-commit hook\nnpx autoclaw run --since="last commit" --quiet 2>/dev/null || true\n';
 
         if (!existsSync(hookPath)) {
           writeFileSync(hookPath, hookContent, { mode: 0o755 });
@@ -85,7 +85,7 @@ export function registerInitCommand(program: Command): void {
         }
       } catch {
         console.log('ℹ️  Husky not found — skipping hook installation');
-        console.log('   To add manually: npx husky init && echo "npx autoclaw run --dry-run" > .husky/post-commit');
+        console.log('   To add manually: npx husky init && echo \'npx autoclaw run --since="last commit" --quiet 2>/dev/null || true\' > .husky/post-commit');
         logger.info('Husky not available — hook installation skipped');
       }
 

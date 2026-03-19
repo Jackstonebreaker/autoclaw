@@ -48,6 +48,16 @@ export function readStarterKit(kitPath: string): StarterKit {
     throw new Error('Invalid autoclaw-kit.json: missing name, version, or rules');
   }
 
+  for (let i = 0; i < manifest.rules.length; i++) {
+    const rule = manifest.rules[i];
+    if (typeof rule.path !== 'string' || !rule.path) {
+      throw new Error(`Invalid rule at index ${i}: missing or invalid "path" field (must be a non-empty string)`);
+    }
+    if (typeof rule.category !== 'string' || !rule.category) {
+      throw new Error(`Invalid rule at index ${i}: missing or invalid "category" field (must be a non-empty string)`);
+    }
+  }
+
   const rules: { rule: StarterKitRule; content: string }[] = [];
   for (const rule of manifest.rules) {
     const rulePath = join(kitPath, rule.path);
