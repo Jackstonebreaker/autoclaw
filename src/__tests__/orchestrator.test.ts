@@ -124,11 +124,22 @@ describe('runPipeline', () => {
     expect(result.steps['9_notifications']?.status).toBe('skipped');
   });
 
-  it('returns error sessionId and stops early when step 1 fails', async () => {
+  it('marks step 1 as error and continues with independent steps when step 1 fails', async () => {
     vi.mocked(analyzeSession).mockRejectedValueOnce(new Error('git error'));
     const result = await runPipeline(storage, baseConfig, {});
-    expect(result.sessionId).toBe('error');
+    // sessionId falls back to 'unknown' when analysis is unavailable
+    expect(result.sessionId).toBe('unknown');
     expect(result.steps['1_analyzeSession']?.status).toBe('error');
+    // Steps dependent on analysis are skipped gracefully
+    expect(result.steps['2_detectPatterns']?.status).toBe('skipped');
+    expect(result.steps['3_generateSuggestions']?.status).toBe('skipped');
+    expect(result.steps['6_qualityCheck']?.status).toBe('skipped');
+    // Independent steps continue running
+    expect(result.steps['4_autoApprove']?.status).toBe('ok');
+    expect(result.steps['8_regressionCheck']?.status).toBe('ok');
+    expect(result.steps['10_docSync']?.status).toBe('ok');
+    // All 11 steps are present in the result
+    expect(Object.keys(result.steps)).toHaveLength(11);
   });
 
   it('continues pipeline when non-critical step fails', async () => {

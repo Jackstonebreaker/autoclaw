@@ -39,7 +39,7 @@ export async function runPipeline(
   const gitData = gatherGitData(options);
 
   // ── Step 1: Analyze Session ──────────────────────────────────────────────
-  let analysis;
+  let analysis: Awaited<ReturnType<typeof analyzeSession>> | null = null;
   const s1 = Date.now();
   try {
     analysis = await analyzeSession(storage, options);
@@ -50,19 +50,22 @@ export async function runPipeline(
     };
   } catch (error) {
     steps['1_analyzeSession'] = { status: 'error', duration: Date.now() - s1, detail: String(error) };
-    logger.error('Step 1 failed', error);
-    return { sessionId: 'error', steps, totalDuration: Date.now() - startTime };
+    logger.error('Step 1 failed — continuing with independent steps', error);
   }
 
   // ── Step 2: Detect Cross-Session Patterns ────────────────────────────────
   const s2 = Date.now();
   try {
-    const detection = await detectCrossSessionPatterns(storage, analysis.patterns, analysis.sessionId);
-    steps['2_detectPatterns'] = {
-      status: 'ok',
-      duration: Date.now() - s2,
-      detail: `${detection.crossSessionMatches.length} cross-session`,
-    };
+    if (!analysis) {
+      steps['2_detectPatterns'] = { status: 'skipped', duration: 0, detail: 'step 1 failed' };
+    } else {
+      const detection = await detectCrossSessionPatterns(storage, analysis.patterns, analysis.sessionId);
+      steps['2_detectPatterns'] = {
+        status: 'ok',
+        duration: Date.now() - s2,
+        detail: `${detection.crossSessionMatches.length} cross-session`,
+      };
+    }
   } catch (error) {
     steps['2_detectPatterns'] = { status: 'error', duration: Date.now() - s2, detail: String(error) };
     logger.error('Step 2 failed', error);
@@ -71,16 +74,20 @@ export async function runPipeline(
   // ── Step 3: Generate Rule Suggestions ────────────────────────────────────
   const s3 = Date.now();
   try {
-    const suggestions = await generateRuleSuggestions(storage, {
-      patterns: analysis.patterns,
-      confidenceThreshold: config.suggestionThreshold,
-      dryRun: options.dryRun,
-    });
-    steps['3_generateSuggestions'] = {
-      status: 'ok',
-      duration: Date.now() - s3,
-      detail: `${suggestions.length} suggestions`,
-    };
+    if (!analysis) {
+      steps['3_generateSuggestions'] = { status: 'skipped', duration: 0, detail: 'step 1 failed' };
+    } else {
+      const suggestions = await generateRuleSuggestions(storage, {
+        patterns: analysis.patterns,
+        confidenceThreshold: config.suggestionThreshold,
+        dryRun: options.dryRun,
+      });
+      steps['3_generateSuggestions'] = {
+        status: 'ok',
+        duration: Date.now() - s3,
+        detail: `${suggestions.length} suggestions`,
+      };
+    }
   } catch (error) {
     steps['3_generateSuggestions'] = { status: 'error', duration: Date.now() - s3, detail: String(error) };
     logger.error('Step 3 failed', error);
@@ -121,13 +128,17 @@ export async function runPipeline(
   // ── Step 6: Detect Quality Degradation ──────────────────────────────────
   const s6 = Date.now();
   try {
-    const qualityResult = await scoreSession(storage, analysis);
-    await detectQualityDegradation(storage, qualityResult.score, analysis.sessionId);
-    steps['6_qualityCheck'] = {
-      status: 'ok',
-      duration: Date.now() - s6,
-      detail: `score: ${(qualityResult.score * 100).toFixed(0)}%, trend: ${qualityResult.trend}`,
-    };
+    if (!analysis) {
+      steps['6_qualityCheck'] = { status: 'skipped', duration: 0, detail: 'step 1 failed' };
+    } else {
+      const qualityResult = await scoreSession(storage, analysis);
+      await detectQualityDegradation(storage, qualityResult.score, analysis.sessionId);
+      steps['6_qualityCheck'] = {
+        status: 'ok',
+        duration: Date.now() - s6,
+        detail: `score: ${(qualityResult.score * 100).toFixed(0)}%, trend: ${qualityResult.trend}`,
+      };
+    }
   } catch (error) {
     steps['6_qualityCheck'] = { status: 'error', duration: Date.now() - s6, detail: String(error) };
     logger.error('Step 6 failed', error);
@@ -217,6 +228,6 @@ export async function runPipeline(
 
   logger.info(`✅ Pipeline complete in ${totalDuration}ms — ${okCount} ok, ${errorCount} errors`);
 
-  return { sessionId: analysis.sessionId, steps, totalDuration };
+  return { sessionId: analysis?.sessionId ?? 'unknown', steps, totalDuration };
 }
 
