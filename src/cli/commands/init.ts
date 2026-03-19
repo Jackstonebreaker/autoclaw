@@ -19,9 +19,10 @@ export function registerInitCommand(program: Command): void {
     .option('--cwd <path>', 'Working directory', process.cwd())
     .option('--from-starter-kit <path>', 'Apply a starter kit from a local directory')
     .option('--dry-run', 'Simulate without making changes', false)
+    .option('--storage <type>', 'Storage backend (supabase|sqlite|file)', undefined)
     .option('--project-name <name>', 'Override project name for starter kit distribution')
     .option('--overwrite', 'Overwrite existing files when applying starter kit', false)
-    .action(async (options: { cwd: string; fromStarterKit?: string; dryRun: boolean; projectName?: string; overwrite: boolean }) => {
+    .action(async (options: { cwd: string; fromStarterKit?: string; dryRun: boolean; storage?: string; projectName?: string; overwrite: boolean }) => {
       const cwd = options.cwd;
 
       // If --from-starter-kit is provided, delegate to distributor and exit

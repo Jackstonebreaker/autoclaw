@@ -11,7 +11,8 @@ export function registerStatusCommand(program: Command): void {
     .command('status')
     .description('Display a dashboard of AutoClaw state')
     .option('--storage <type>', 'Storage backend (sqlite|file|supabase)', undefined)
-    .action(async (options: { storage?: string }) => {
+    .option('--dry-run', 'Simulate without making changes (no-op for read-only status)', false)
+    .action(async (options: { storage?: string; dryRun: boolean }) => {
       const config = loadConfig();
       if (options.storage) {
         (config as Record<string, unknown>).storage = options.storage;

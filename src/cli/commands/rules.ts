@@ -97,10 +97,11 @@ export function registerRulesCommand(program: Command): void {
   rulesCmd
     .command('generate')
     .description('Generate universal rules from already-classified rules in storage')
+    .option('--dry-run', 'Preview without writing files', false)
     .option('--output <dir>', 'Output directory', './rules/universal')
     .option('--storage <type>', 'Storage backend', 'file')
     .option('--sources <paths>', 'Comma-separated source paths to read rules from directly')
-    .action(async (opts: { output: string; storage: string; sources?: string }) => {
+    .action(async (opts: { dryRun: boolean; output: string; storage: string; sources?: string }) => {
       const config = loadConfig(process.cwd());
       const storage = createStorage({ ...config, storage: opts.storage as AutoClawConfig['storage'] });
       await storage.initialize();
