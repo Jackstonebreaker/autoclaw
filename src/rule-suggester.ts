@@ -1,5 +1,6 @@
 import { callClaude, MODELS, SimpleQueue } from './ai/index.js';
 import { createLogger } from './logger.js';
+import { DEFAULT_RULE_DIRS } from './rules-reader.js';
 import type { StorageAdapter } from './storage/adapter.js';
 import type { SessionPattern, RuleSuggestion } from './types.js';
 import { RuleSuggestionSchema } from './types.js';
@@ -76,7 +77,7 @@ Return a JSON array of rules. Return ONLY the JSON array, no markdown.`;
         confidence: typeof raw['confidence'] === 'number' ? raw['confidence'] : 0.5,
         status: 'PENDING',
         sourcePatterns: eligiblePatterns.map(p => p.description),
-        targetFiles: ['.claude/rules', '.augment/rules', '.cursor/rules'],
+        targetFiles: DEFAULT_RULE_DIRS,
         createdAt: now,
       });
     });

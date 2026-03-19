@@ -79,6 +79,8 @@ export async function scoreSession(
   analysis: SessionAnalysis
 ): Promise<QualityResult> {
   const score = calculateQualityScore(analysis);
+  // PERF: sessions are fetched independently to keep functions decoupled.
+  // Each function can be called standalone without the other.
   const sessions = await storage.getSessions({ limit: 20 });
 
   const recent5 = sessions.slice(0, 5);
