@@ -202,14 +202,14 @@ describe('CLI Commands — structure and flags', () => {
     it('is registered in Commander', () => {
       expect(makeProgram(registerSyncCommand).commands.find(c => c.name() === 'sync')).toBeDefined();
     });
-    it('has --kit, --check, --apply, --dry-run, --storage, --custom-rules', () => {
+    it('has --kit, --check, --apply, --dry-run, --custom-rules', () => {
       const p = makeProgram(registerSyncCommand);
       const f = flags(p.commands.find(c => c.name() === 'sync')!);
       expect(f).toContain('--kit');
       expect(f).toContain('--check');
       expect(f).toContain('--apply');
       expect(f).toContain('--dry-run');
-      expect(f).toContain('--storage');
+      expect(f).not.toContain('--storage');
       expect(f).toContain('--custom-rules');
     });
     it('marks --kit as a required (mandatory) option', () => {

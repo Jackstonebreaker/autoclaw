@@ -145,10 +145,24 @@ function installHuskyHook(targetDir: string): boolean {
   mkdirSync(huskyDir, { recursive: true });
 
   const hookPath = join(huskyDir, 'post-commit');
+  const autoclaWLine = 'npx autoclaw run --since="last commit" --quiet 2>/dev/null || true';
+
+  if (existsSync(hookPath)) {
+    const existing = readFileSync(hookPath, 'utf-8');
+    if (existing.includes('autoclaw')) {
+      logger.info('Husky post-commit hook already contains autoclaw — skipping');
+      return true;
+    }
+    // Append to existing hook without overwriting user content
+    const separator = existing.endsWith('\n') ? '' : '\n';
+    writeFileSync(hookPath, `${existing}${separator}# AutoClaw post-commit hook\n${autoclaWLine}\n`, { mode: 0o755 });
+    return true;
+  }
+
   const hookContent = [
     '#!/bin/sh',
     '# AutoClaw post-commit hook',
-    'npx autoclaw run --since="last commit" --quiet 2>/dev/null || true',
+    autoclaWLine,
     '',
   ].join('\n');
 

@@ -12,9 +12,8 @@ export function registerSyncCommand(program: Command): void {
     .option('--check', 'Check sync status without applying', false)
     .option('--apply', 'Apply sync updates', false)
     .option('--dry-run', 'Preview changes without applying', false)
-    .option('--storage <type>', 'Storage backend (supabase|sqlite|file)', undefined)
     .option('--custom-rules <rules...>', 'Custom rules to preserve (space-separated paths)')
-    .action(async (opts: { kit: string; check: boolean; apply: boolean; dryRun: boolean; storage?: string; customRules?: string[] }) => {
+    .action(async (opts: { kit: string; check: boolean; apply: boolean; dryRun: boolean; customRules?: string[] }) => {
       const customRules = opts.customRules ?? [];
       const cwd = process.cwd();
 
@@ -48,6 +47,7 @@ export function registerSyncCommand(program: Command): void {
 
         console.log('\n🔄 Sync Apply Report');
         console.log('═'.repeat(40));
+        console.log(`  Up-to-date: ${result.upToDate}`);
         console.log(`  Updated:    ${result.updated.length}`);
         console.log(`  Created:    ${result.created.length}`);
         console.log(`  Preserved:  ${result.preserved.length}`);
