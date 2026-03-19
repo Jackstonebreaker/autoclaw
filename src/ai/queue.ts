@@ -26,7 +26,7 @@ export class SimpleQueue {
           reject(error);
         }
       });
-      this.processNext();
+      void this.processNext();
     });
   }
 
@@ -43,7 +43,7 @@ export class SimpleQueue {
       if (this.intervalMs > 0) {
         await new Promise(r => setTimeout(r, this.intervalMs));
       }
-      this.processNext();
+      void this.processNext();
     }
   }
 

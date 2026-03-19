@@ -4,6 +4,7 @@
   "description": "CLI tool that automates code improvement by extracting patterns and generating rules",
   "type": "module",
   "main": "dist/index.js",
+  "files": ["dist/", "README.md"],
   "bin": {
     "autoclaw": "dist/cli/index.js"
   },

@@ -242,8 +242,8 @@ export const AutoClawConfigSchema = z.object({
   suggestionThreshold: z.number().min(0).max(1).default(0.70),
   targetDirs: z.array(z.string()).default(['.claude/rules', '.augment/rules', '.cursor/rules']),
   supabaseUrl: z.string().url().optional(),
-  supabaseKey: z.string().optional(),
-  linearApiKey: z.string().optional(),
+  supabaseKey: z.string().min(1).optional(),
+  linearApiKey: z.string().min(1).optional(),
   starterKit: StarterKitConfigSchema.optional(),
 });
 export type AutoClawConfig = z.infer<typeof AutoClawConfigSchema>;

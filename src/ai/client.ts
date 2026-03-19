@@ -1,8 +1,25 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { SimpleQueue } from './queue.js';
 
-/** Singleton Anthropic client — always use this, never instantiate directly */
-export const aiClient = new Anthropic();
+// Lazy-initialize to avoid module-load failure when ANTHROPIC_API_KEY is not set
+let _aiClient: Anthropic | null = null;
+
+function getAiClient(): Anthropic {
+  if (!_aiClient) {
+    _aiClient = new Anthropic();
+  }
+  return _aiClient;
+}
+
+/**
+ * Singleton Anthropic client — lazily initialized on first access.
+ * Always use this, never instantiate Anthropic directly.
+ */
+export const aiClient = new Proxy({} as Anthropic, {
+  get(_target, prop: string | symbol) {
+    return Reflect.get(getAiClient() as object, prop, getAiClient());
+  },
+});
 
 /** Singleton queue for rate limiting — always use this for API calls */
 export const aiQueue = new SimpleQueue();
@@ -36,8 +53,22 @@ export interface CallClaudeResult {
  * Determine if an error is retriable.
  * 5xx, rate limit (429), and network errors are retriable.
  * 4xx client errors (auth, not found, bad request) are NOT retriable.
+ *
+ * Uses duck-typing on `.status` to handle SDK APIError instances (which carry
+ * an HTTP status code) without relying on `instanceof` checks that break when
+ * the SDK is mocked in tests.
  */
 export function isRetriableError(error: unknown): boolean {
+  // SDK errors expose a numeric `status` field — use it for precise detection.
+  // Duck-typing avoids instanceof issues when SDK classes are mocked in tests.
+  if (error !== null && typeof error === 'object' && 'status' in error) {
+    const status = (error as { status: number }).status;
+    if (status === 429 || status >= 500) return true;
+    if (status >= 400 && status < 500) return false;
+  }
+
+  // Fallback string matching for plain Error objects (e.g. generic network errors
+  // or errors thrown in test environments where the SDK is mocked).
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
     // Rate limit and server errors are retriable
