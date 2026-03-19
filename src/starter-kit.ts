@@ -56,6 +56,15 @@ export function readStarterKit(kitPath: string): StarterKit {
     if (typeof rule.category !== 'string' || !rule.category) {
       throw new Error(`Invalid rule at index ${i}: missing or invalid "category" field (must be a non-empty string)`);
     }
+    if (typeof rule.severity !== 'string' || !rule.severity) {
+      throw new Error(`Invalid rule at index ${i}: missing or invalid "severity" field (must be a non-empty string)`);
+    }
+    if (typeof rule.target !== 'string' || !rule.target) {
+      throw new Error(`Invalid rule at index ${i}: missing or invalid "target" field (must be a non-empty string)`);
+    }
+    if (typeof rule.description !== 'string' || !rule.description) {
+      throw new Error(`Invalid rule at index ${i}: missing or invalid "description" field (must be a non-empty string)`);
+    }
   }
 
   const rules: { rule: StarterKitRule; content: string }[] = [];

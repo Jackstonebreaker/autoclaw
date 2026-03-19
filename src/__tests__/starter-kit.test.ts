@@ -71,6 +71,71 @@ describe('readStarterKit', () => {
     expect(() => readStarterKit('/kits/bad-manifest')).toThrow('Invalid autoclaw-kit.json: missing name, version, or rules');
   });
 
+  it('throws if a rule has an empty path', () => {
+    const badManifest = {
+      ...validManifest,
+      rules: [{ path: '', category: 'security', severity: 'HIGH', target: 'universal', description: 'desc' }],
+    };
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValueOnce(JSON.stringify(badManifest) as unknown as Buffer);
+
+    expect(() => readStarterKit('/kits/bad-rule')).toThrow(
+      'Invalid rule at index 0: missing or invalid "path" field (must be a non-empty string)'
+    );
+  });
+
+  it('throws if a rule has a missing category', () => {
+    const badManifest = {
+      ...validManifest,
+      rules: [{ path: 'rules/x.md', category: '', severity: 'HIGH', target: 'universal', description: 'desc' }],
+    };
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValueOnce(JSON.stringify(badManifest) as unknown as Buffer);
+
+    expect(() => readStarterKit('/kits/bad-rule')).toThrow(
+      'Invalid rule at index 0: missing or invalid "category" field (must be a non-empty string)'
+    );
+  });
+
+  it('throws if a rule has a missing or invalid severity', () => {
+    const badManifest = {
+      ...validManifest,
+      rules: [{ path: 'rules/x.md', category: 'security', severity: '', target: 'universal', description: 'desc' }],
+    };
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValueOnce(JSON.stringify(badManifest) as unknown as Buffer);
+
+    expect(() => readStarterKit('/kits/bad-rule')).toThrow(
+      'Invalid rule at index 0: missing or invalid "severity" field (must be a non-empty string)'
+    );
+  });
+
+  it('throws if a rule has a missing or invalid target', () => {
+    const badManifest = {
+      ...validManifest,
+      rules: [{ path: 'rules/x.md', category: 'security', severity: 'HIGH', target: '', description: 'desc' }],
+    };
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValueOnce(JSON.stringify(badManifest) as unknown as Buffer);
+
+    expect(() => readStarterKit('/kits/bad-rule')).toThrow(
+      'Invalid rule at index 0: missing or invalid "target" field (must be a non-empty string)'
+    );
+  });
+
+  it('throws if a rule has a missing or invalid description', () => {
+    const badManifest = {
+      ...validManifest,
+      rules: [{ path: 'rules/x.md', category: 'security', severity: 'HIGH', target: 'universal', description: '' }],
+    };
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValueOnce(JSON.stringify(badManifest) as unknown as Buffer);
+
+    expect(() => readStarterKit('/kits/bad-rule')).toThrow(
+      'Invalid rule at index 0: missing or invalid "description" field (must be a non-empty string)'
+    );
+  });
+
   it('warns and skips rule files that are absent from the manifest', () => {
     mockExistsSync
       .mockReturnValueOnce(true)   // kitPath
