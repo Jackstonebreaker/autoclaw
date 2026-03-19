@@ -62,7 +62,7 @@ Return a JSON array of rules. Return ONLY the JSON array, no markdown.`;
   );
 
   try {
-    const parsed = JSON.parse(result.content) as unknown;
+    const parsed: unknown = JSON.parse(result.content);
     if (!Array.isArray(parsed)) return [];
 
     const now = new Date().toISOString();

@@ -16,7 +16,7 @@ export function loadConfig(cwd: string = process.cwd()): AutoClawConfig {
   }
 
   const raw = readFileSync(configPath, 'utf-8');
-  const parsed = JSON.parse(raw) as unknown;
+  const parsed: unknown = JSON.parse(raw);
   return AutoClawConfigSchema.parse(parsed);
 }
 
