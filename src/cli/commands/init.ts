@@ -4,6 +4,9 @@ import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { createLogger } from '../../logger.js';
 import { AutoClawConfigSchema } from '../../types.js';
+import { loadConfig } from '../../config.js';
+import { createStorage } from '../../storage/index.js';
+import { distributeStarterKit } from '../../starter-kit-distributor.js';
 
 const logger = createLogger('cli:init');
 
@@ -14,8 +17,22 @@ export function registerInitCommand(program: Command): void {
     .command('init')
     .description('Initialize AutoClaw in the current project')
     .option('--cwd <path>', 'Working directory', process.cwd())
-    .action(async (options: { cwd: string }) => {
+    .option('--from-starter-kit <path>', 'Apply a starter kit from a local directory')
+    .option('--dry-run', 'Simulate without making changes', false)
+    .option('--project-name <name>', 'Override project name for starter kit distribution')
+    .option('--overwrite', 'Overwrite existing files when applying starter kit', false)
+    .action(async (options: { cwd: string; fromStarterKit?: string; dryRun: boolean; projectName?: string; overwrite: boolean }) => {
       const cwd = options.cwd;
+
+      // If --from-starter-kit is provided, delegate to distributor and exit
+      if (options.fromStarterKit) {
+        await runFromStarterKit(options.fromStarterKit, cwd, {
+          dryRun: options.dryRun,
+          projectName: options.projectName,
+          overwrite: options.overwrite,
+        });
+        return;
+      }
 
       console.log('\n🐾 AutoClaw Init');
       console.log('─'.repeat(40));
@@ -76,3 +93,60 @@ export function registerInitCommand(program: Command): void {
     });
 }
 
+async function runFromStarterKit(
+  kitPath: string,
+  cwd: string,
+  options: { dryRun: boolean; projectName?: string; overwrite: boolean }
+): Promise<void> {
+  console.log('\n🐾 AutoClaw Init — From Starter Kit');
+  console.log('─'.repeat(40));
+  console.log(`  Kit   : ${kitPath}`);
+  console.log(`  Target: ${cwd}`);
+  if (options.dryRun) console.log('  Mode  : dry-run');
+  console.log('');
+
+  const config = loadConfig(cwd);
+  const storage = createStorage(config);
+  await storage.initialize();
+
+  try {
+    const result = await distributeStarterKit(kitPath, cwd, storage, {
+      projectName: options.projectName,
+      overwrite: options.overwrite,
+      dryRun: options.dryRun,
+    });
+
+    // Applied files
+    if (result.applied.length > 0) {
+      console.log(`✓  Applied ${result.applied.length} file(s):`);
+      for (const f of result.applied) console.log(`     + ${f}`);
+    }
+
+    // Skipped files
+    if (result.skipped.length > 0) {
+      console.log(`⏭  Skipped ${result.skipped.length} existing file(s):`);
+      for (const f of result.skipped) console.log(`     ~ ${f}`);
+    }
+
+    // Extra steps
+    if (!options.dryRun) {
+      console.log(result.claudeMdGenerated ? '✓  Generated CLAUDE.md' : '⏭  CLAUDE.md skipped');
+      console.log(result.huskyInstalled ? '✓  Installed Husky post-commit hook' : '⏭  Husky hook skipped');
+      console.log(result.snapshotSaved ? '✓  Snapshot saved to storage' : '⚠️  Snapshot not saved');
+    }
+
+    // Errors
+    if (result.errors.length > 0) {
+      console.log(`\n⚠️  ${result.errors.length} error(s):`);
+      for (const e of result.errors) console.log(`   ✗ ${e}`);
+    }
+
+    console.log(
+      options.dryRun
+        ? '\n⚠️  Dry-run mode — no files written.\n'
+        : '\n✅ Starter kit applied successfully!\n'
+    );
+  } finally {
+    await storage.close();
+  }
+}
