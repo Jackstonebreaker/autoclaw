@@ -8,6 +8,7 @@ import { registerRunCommand } from './commands/run.js';
 import { registerStatusCommand } from './commands/status.js';
 import { registerInitCommand } from './commands/init.js';
 import { registerRulesCommand } from './commands/rules.js';
+import { registerSyncCommand } from './commands/sync.js';
 
 const program = new Command();
 
@@ -24,6 +25,7 @@ registerRunCommand(program);
 registerStatusCommand(program);
 registerInitCommand(program);
 registerRulesCommand(program);
+registerSyncCommand(program);
 
 program.parse();
 
