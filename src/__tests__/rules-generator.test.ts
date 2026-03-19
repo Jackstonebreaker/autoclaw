@@ -9,7 +9,7 @@ vi.mock('node:fs', () => ({
 
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { generateUniversalRules } from '../rules-generator.js';
-import type { ConsolidatedRule } from '../rules-consolidator.js';
+import type { PipelineRule } from '../rules-consolidator.js';
 import type { StorageAdapter } from '../storage/adapter.js';
 
 const mockMkdirSync = vi.mocked(mkdirSync);
@@ -44,7 +44,7 @@ function makeStorageAdapter(): StorageAdapter {
   } as unknown as StorageAdapter;
 }
 
-function makeRule(overrides: Partial<ConsolidatedRule> = {}): ConsolidatedRule {
+function makeRule(overrides: Partial<PipelineRule> = {}): PipelineRule {
   return {
     id: 'test-uuid-1234',
     category: 'security',

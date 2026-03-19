@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { createLogger } from './logger.js';
 import type { StorageAdapter } from './storage/adapter.js';
 import type { ConsolidatedRule as StorageRule } from './types.js';
-import type { ConsolidatedRule } from './rules-consolidator.js';
+import type { PipelineRule } from './rules-consolidator.js';
 
 const logger = createLogger('rules-generator');
 
@@ -12,7 +12,7 @@ const logger = createLogger('rules-generator');
  * Idempotent: skips files whose content has not changed.
  */
 export async function generateUniversalRules(
-  rules: ConsolidatedRule[],
+  rules: PipelineRule[],
   storage: StorageAdapter,
   outputDir = './rules/universal',
 ): Promise<{ filesWritten: number; filesSkipped: number }> {
@@ -62,7 +62,7 @@ export async function generateUniversalRules(
   return { filesWritten, filesSkipped };
 }
 
-function buildRuleFile(rule: ConsolidatedRule): string {
+function buildRuleFile(rule: PipelineRule): string {
   return `# ${rule.title}
 
 > Severity: ${rule.severity}
@@ -81,8 +81,8 @@ ${rule.content}
 `;
 }
 
-/** Map local ConsolidatedRule to the types.ts ConsolidatedRule expected by StorageAdapter. */
-function toStorageRule(rule: ConsolidatedRule): StorageRule {
+/** Map local PipelineRule to the types.ts ConsolidatedRule expected by StorageAdapter. */
+function toStorageRule(rule: PipelineRule): StorageRule {
   return {
     id: rule.id,
     title: rule.title,

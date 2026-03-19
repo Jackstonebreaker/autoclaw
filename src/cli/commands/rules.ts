@@ -5,26 +5,28 @@ import { createLogger } from '../../logger.js';
 import { auditRules } from '../../rules-auditor.js';
 import { generateUniversalRules } from '../../rules-generator.js';
 import type { AutoClawConfig, ConsolidatedRule as StorageConsolidatedRule } from '../../types.js';
-import type { ConsolidatedRule } from '../../rules-consolidator.js';
+import type { PipelineRule } from '../../rules-consolidator.js';
 
 const logger = createLogger('cli:rules');
 
 /** Reverse-map storage severity (CRITICAL/MAJOR/MINOR) to consolidator severity */
-function toConsolidatorSeverity(s: string): string {
+export function toConsolidatorSeverity(s: string): string {
   if (s === 'MAJOR') return 'HIGH';
   if (s === 'MINOR') return 'MEDIUM';
-  return s; // CRITICAL stays CRITICAL
+  if (s !== 'CRITICAL') logger.warn(`Unmapped storage severity: "${s}", using as-is`);
+  return s;
 }
 
 /** Reverse-map storage targetIDE to consolidator target */
-function toConsolidatorTarget(t: string): string {
+export function toConsolidatorTarget(t: string): string {
   if (t === 'claude') return 'agents-only';
   if (t === 'cursor') return 'nextjs-only';
+  if (t !== 'universal') logger.warn(`Unmapped storage target: "${t}", falling back to "universal"`);
   return 'universal';
 }
 
-/** Map storage ConsolidatedRule to consolidator ConsolidatedRule for generateUniversalRules */
-function toConsolidatorRule(r: StorageConsolidatedRule): ConsolidatedRule {
+/** Map storage ConsolidatedRule to PipelineRule for generateUniversalRules */
+function toConsolidatorRule(r: StorageConsolidatedRule): PipelineRule {
   return {
     id: r.id,
     category: r.classification.category.toLowerCase(),

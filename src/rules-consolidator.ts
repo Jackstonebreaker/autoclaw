@@ -1,13 +1,13 @@
 import { callClaude, MODELS } from './ai/index.js';
 import { SimpleQueue } from './ai/queue.js';
 import { createLogger } from './logger.js';
-import type { ClassifiedRule } from './rules-classifier.js';
+import type { ClassifiedRule } from './types.js';
 
 const logger = createLogger('rules-consolidator');
 const queue = new SimpleQueue();
 
-/** Local consolidated rule — distinct from types.ts ConsolidatedRule (storage format). */
-export interface ConsolidatedRule {
+/** Local pipeline rule — distinct from types.ts ConsolidatedRule (storage format). */
+export interface PipelineRule {
   id: string;
   category: string;
   severity: string;
@@ -24,18 +24,18 @@ export interface ConsolidatedRule {
 
 /**
  * Consolidate classified rules — merge overlapping rules (similarity >= overlapThreshold).
- * Returns one ConsolidatedRule per connected component.
+ * Returns one PipelineRule per connected component.
  */
 export async function consolidateRules(
   classifiedRules: ClassifiedRule[],
   overlapThreshold = 0.4,
-): Promise<ConsolidatedRule[]> {
+): Promise<PipelineRule[]> {
   if (classifiedRules.length === 0) return [];
 
   logger.info(`Consolidating ${classifiedRules.length} rules (threshold: ${overlapThreshold})`);
 
   const groups = groupOverlappingRules(classifiedRules, overlapThreshold);
-  const consolidated: ConsolidatedRule[] = [];
+  const consolidated: PipelineRule[] = [];
 
   for (const group of groups) {
     if (group.length === 1) {
@@ -104,7 +104,7 @@ export function calculateUniversalScore(group: ClassifiedRule[]): number {
   return Math.min(dirScore + fileScore, 100);
 }
 
-async function mergeRuleGroup(group: ClassifiedRule[]): Promise<ConsolidatedRule> {
+async function mergeRuleGroup(group: ClassifiedRule[]): Promise<PipelineRule> {
   const severityOrder = ['CRITICAL', 'HIGH', 'MEDIUM'];
   const highestSeverity = group
     .map(r => r.severity)

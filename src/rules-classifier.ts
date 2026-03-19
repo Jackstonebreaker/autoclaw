@@ -77,7 +77,7 @@ Return JSON:
   const parsed = JSON.parse(jsonMatch[0]) as Partial<{
     category: RuleCategory;
     target: RuleTarget;
-    severity: RuleSeverity;
+    severity: ClassifierSeverity;
     summary: string;
     keyPatterns: string[];
   }>;

@@ -58,8 +58,9 @@ import { registerApplyCommand } from '../cli/commands/apply.js';
 import { registerRunCommand } from '../cli/commands/run.js';
 import { registerStatusCommand } from '../cli/commands/status.js';
 import { registerInitCommand } from '../cli/commands/init.js';
-import { registerRulesCommand } from '../cli/commands/rules.js';
+import { registerRulesCommand, toConsolidatorSeverity, toConsolidatorTarget } from '../cli/commands/rules.js';
 import { registerSyncCommand } from '../cli/commands/sync.js';
+import { createStorage } from '../storage/index.js';
 
 /** Create a fresh Commander program with one registered command */
 function makeProgram(registerFn: (p: Command) => void): Command {
@@ -218,5 +219,55 @@ describe('CLI Commands — structure and flags', () => {
       const kitOpt = syncCmd.options.find(o => o.long === '--kit');
       expect(kitOpt?.mandatory).toBe(true);
     });
+  });
+});
+
+// ─── Reverse mapper unit tests ─────────────────────────────────────────────
+
+describe('toConsolidatorSeverity', () => {
+  it('maps MAJOR to HIGH', () => {
+    expect(toConsolidatorSeverity('MAJOR')).toBe('HIGH');
+  });
+  it('maps MINOR to MEDIUM', () => {
+    expect(toConsolidatorSeverity('MINOR')).toBe('MEDIUM');
+  });
+  it('passes CRITICAL through unchanged', () => {
+    expect(toConsolidatorSeverity('CRITICAL')).toBe('CRITICAL');
+  });
+  it('returns unknown value as-is', () => {
+    expect(toConsolidatorSeverity('BLOCKER')).toBe('BLOCKER');
+  });
+});
+
+describe('toConsolidatorTarget', () => {
+  it('maps claude to agents-only', () => {
+    expect(toConsolidatorTarget('claude')).toBe('agents-only');
+  });
+  it('maps cursor to nextjs-only', () => {
+    expect(toConsolidatorTarget('cursor')).toBe('nextjs-only');
+  });
+  it('maps universal to universal', () => {
+    expect(toConsolidatorTarget('universal')).toBe('universal');
+  });
+  it('falls back to universal for unknown targets', () => {
+    expect(toConsolidatorTarget('vscode')).toBe('universal');
+  });
+});
+
+describe('rules generate — no rules in storage', () => {
+  it('prints guidance when storage has no consolidated rules', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const emptyStorage = {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      getConsolidatedRules: vi.fn().mockResolvedValue([]),
+    };
+    vi.mocked(createStorage).mockReturnValueOnce(emptyStorage as ReturnType<typeof createStorage>);
+
+    const p = makeProgram(registerRulesCommand);
+    await p.parseAsync(['node', 'autoclaw', 'rules', 'generate']);
+
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No consolidated rules found'));
+    consoleSpy.mockRestore();
   });
 });

@@ -14,7 +14,7 @@ import { auditRules } from '../rules-auditor.js';
 import type { StorageAdapter } from '../storage/adapter.js';
 import type { RawRule } from '../rules-reader.js';
 import type { ClassifiedRule } from '../rules-classifier.js';
-import type { ConsolidatedRule } from '../rules-consolidator.js';
+import type { PipelineRule } from '../rules-consolidator.js';
 
 const mockReadRules = vi.mocked(readRules);
 const mockClassifyRules = vi.mocked(classifyRules);
@@ -74,7 +74,7 @@ function makeClassifiedRule(overrides: Partial<ClassifiedRule> = {}): Classified
   };
 }
 
-function makeConsolidatedRule(overrides: Partial<ConsolidatedRule> = {}): ConsolidatedRule {
+function makeConsolidatedRule(overrides: Partial<PipelineRule> = {}): PipelineRule {
   return {
     id: 'uuid-1234',
     category: 'security',
