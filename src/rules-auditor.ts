@@ -13,6 +13,8 @@ export interface AuditResult {
   consolidated: number;
   generated: number;
   overlapsDetected: number;
+  /** Percentage of raw rules that survived consolidation (0–100). 100 when no rules scanned. */
+  coveragePercent: number;
   categories: Record<string, number>;
   severities: Record<string, number>;
 }
@@ -46,6 +48,7 @@ export async function auditRules(
       consolidated: 0,
       generated: 0,
       overlapsDetected: 0,
+      coveragePercent: 100,
       categories: {},
       severities: {},
     };
@@ -80,12 +83,15 @@ export async function auditRules(
     severities[rule.severity] = (severities[rule.severity] ?? 0) + 1;
   }
 
+  const coveragePercent = Math.round((consolidated.length / rawRules.length) * 100);
+
   const result: AuditResult = {
     totalRulesScanned: rawRules.length,
     classified: classified.length,
     consolidated: consolidated.length,
     generated,
     overlapsDetected,
+    coveragePercent,
     categories,
     severities,
   };

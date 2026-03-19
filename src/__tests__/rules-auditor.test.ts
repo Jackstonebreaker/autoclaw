@@ -209,5 +209,65 @@ describe('auditRules', () => {
       './custom/output',
     );
   });
+
+  it('passes custom cwd to readRules', async () => {
+    mockReadRules.mockReturnValue([]);
+    const storage = makeStorage();
+
+    await auditRules(storage, { cwd: '/custom/repo' });
+
+    expect(mockReadRules).toHaveBeenCalledWith('/custom/repo', undefined);
+  });
+
+  it('returns coveragePercent >= 80 when consolidated >= 80% of scanned', async () => {
+    // 4 raw rules → 4 classified → 4 consolidated = 100%
+    const rawRules = [
+      makeRawRule(),
+      makeRawRule({ fileName: 'b.md' }),
+      makeRawRule({ fileName: 'c.md' }),
+      makeRawRule({ fileName: 'd.md' }),
+      makeRawRule({ fileName: 'e.md' }),
+    ];
+    const classified = rawRules.map((r) => makeClassifiedRule({ fileName: r.fileName }));
+    const consolidated = [
+      makeConsolidatedRule(),
+      makeConsolidatedRule({ id: 'uuid-2' }),
+      makeConsolidatedRule({ id: 'uuid-3' }),
+      makeConsolidatedRule({ id: 'uuid-4' }),
+    ]; // 4/5 = 80%
+
+    mockReadRules.mockReturnValue(rawRules);
+    mockClassifyRules.mockResolvedValue(classified);
+    mockConsolidateRules.mockResolvedValue(consolidated);
+    mockGenerateUniversalRules.mockResolvedValue({ filesWritten: 1, filesSkipped: 0 });
+
+    const storage = makeStorage();
+    const result = await auditRules(storage, { cwd: '/project' });
+
+    expect(result.coveragePercent).toBeGreaterThanOrEqual(80);
+  });
+
+  it('returns coveragePercent < 80 when consolidated < 80% of scanned', async () => {
+    // 5 raw rules → 5 classified → only 1 consolidated = 20%
+    const rawRules = [
+      makeRawRule(),
+      makeRawRule({ fileName: 'b.md' }),
+      makeRawRule({ fileName: 'c.md' }),
+      makeRawRule({ fileName: 'd.md' }),
+      makeRawRule({ fileName: 'e.md' }),
+    ];
+    const classified = rawRules.map((r) => makeClassifiedRule({ fileName: r.fileName }));
+    const consolidated = [makeConsolidatedRule()]; // 1/5 = 20%
+
+    mockReadRules.mockReturnValue(rawRules);
+    mockClassifyRules.mockResolvedValue(classified);
+    mockConsolidateRules.mockResolvedValue(consolidated);
+    mockGenerateUniversalRules.mockResolvedValue({ filesWritten: 1, filesSkipped: 0 });
+
+    const storage = makeStorage();
+    const result = await auditRules(storage, { cwd: '/project' });
+
+    expect(result.coveragePercent).toBeLessThan(80);
+  });
 });
 

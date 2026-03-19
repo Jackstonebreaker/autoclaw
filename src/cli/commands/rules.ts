@@ -51,14 +51,16 @@ export function registerRulesCommand(program: Command): void {
     .option('--dry-run', 'Preview without writing files', false)
     .option('--output <dir>', 'Output directory for generated rules', './rules/universal')
     .option('--storage <type>', 'Storage backend', 'file')
-    .action(async (opts: { dryRun: boolean; output: string; storage: string }) => {
-      const config = loadConfig(process.cwd());
+    .option('--path <dir>', 'Path to repo to audit', '.')
+    .action(async (opts: { dryRun: boolean; output: string; storage: string; path: string }) => {
+      const cwd = opts.path === '.' ? process.cwd() : opts.path;
+      const config = loadConfig(cwd);
       const storage = createStorage({ ...config, storage: opts.storage as AutoClawConfig['storage'] });
       await storage.initialize();
 
       try {
         const result = await auditRules(storage, {
-          cwd: process.cwd(),
+          cwd,
           outputDir: opts.output,
           dryRun: opts.dryRun,
         });
@@ -70,6 +72,7 @@ export function registerRulesCommand(program: Command): void {
         console.log(`  Consolidated:     ${result.consolidated}`);
         console.log(`  Overlaps found:   ${result.overlapsDetected}`);
         console.log(`  Files generated:  ${result.generated}`);
+        console.log(`  Coverage:         ${result.coveragePercent}%`);
         console.log('\n  Categories:');
         for (const [cat, count] of Object.entries(result.categories)) {
           console.log(`    ${cat}: ${count}`);
@@ -79,6 +82,12 @@ export function registerRulesCommand(program: Command): void {
           console.log(`    ${sev}: ${count}`);
         }
         if (opts.dryRun) console.log('\n  ⚠️  Dry-run mode — no files written');
+
+        // Exit code: 1 if consolidation coverage < 80%
+        if (result.coveragePercent < 80) {
+          logger.warn(`Coverage ${result.coveragePercent}% is below 80% threshold`);
+          process.exitCode = 1;
+        }
       } finally {
         await storage.close();
       }
@@ -90,12 +99,25 @@ export function registerRulesCommand(program: Command): void {
     .description('Generate universal rules from already-classified rules in storage')
     .option('--output <dir>', 'Output directory', './rules/universal')
     .option('--storage <type>', 'Storage backend', 'file')
-    .action(async (opts: { output: string; storage: string }) => {
+    .option('--sources <paths>', 'Comma-separated source paths to read rules from directly')
+    .action(async (opts: { output: string; storage: string; sources?: string }) => {
       const config = loadConfig(process.cwd());
       const storage = createStorage({ ...config, storage: opts.storage as AutoClawConfig['storage'] });
       await storage.initialize();
 
       try {
+        if (opts.sources) {
+          // Run full pipeline from custom source paths
+          const customPaths = opts.sources.split(',').map((p: string) => p.trim()).filter(Boolean);
+          const result = await auditRules(storage, {
+            cwd: process.cwd(),
+            outputDir: opts.output,
+            customPaths,
+          });
+          console.log(`\n✅ Generated ${result.generated} files from custom sources`);
+          return;
+        }
+
         const storageRules = await storage.getConsolidatedRules();
         if (storageRules.length === 0) {
           console.log('No consolidated rules found. Run `autoclaw rules audit` first.');
